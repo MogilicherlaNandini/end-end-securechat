@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { BrowserRouter as Router, Routes, Route, useParams } from "react-router-dom"; 
-import { Buffer } from 'buffer'; 
+import { BrowserRouter as Router, Routes, Route, useParams } from "react-router-dom";
+import { Buffer } from "buffer";
 import Chat from "./chat/chat";
 import Process from "./process/process";
 import Home from "./home/home";
@@ -14,6 +14,7 @@ function Appmain() {
   const { username, roomname } = useParams();
   const [encryptedText, setEncryptedText] = useState("");
   const [decryptedText, setDecryptedText] = useState("");
+  const [encryptedFile, setEncryptedFile] = useState("");
 
   return (
     <React.Fragment>
@@ -24,10 +25,15 @@ function Appmain() {
           socket={socket}
           setEncryptedText={setEncryptedText}
           setDecryptedText={setDecryptedText}
+          setEncryptedFile={setEncryptedFile} // Pass file handler
         />
       </div>
       <div className="left">
-        <Process encryptedText={encryptedText} decryptedText={decryptedText} />
+        <Process
+          encryptedText={encryptedText}
+          decryptedText={decryptedText}
+          encryptedFile={encryptedFile} // Display encrypted file data
+        />
       </div>
     </React.Fragment>
   );

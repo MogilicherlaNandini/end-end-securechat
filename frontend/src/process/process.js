@@ -1,7 +1,6 @@
-import { useSelector } from "react-redux";
 import "./process.scss";
 
-function Process({ encryptedText, decryptedText }) {
+function Process({ encryptedText, decryptedText, encryptedFile }) {
   return (
     <div className="process">
       <h5>
@@ -11,6 +10,12 @@ function Process({ encryptedText, decryptedText }) {
       <div className="incoming">
         <h4>Encrypted Data</h4>
         <p>{encryptedText}</p>
+        {encryptedFile && (
+          <div className="file">
+            <h4>Encrypted File</h4>
+            <p>{encryptedFile}</p>
+          </div>
+        )}
       </div>
       <div className="crypt">
         <h4>Decrypted Data</h4>

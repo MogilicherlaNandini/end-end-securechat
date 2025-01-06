@@ -13,50 +13,84 @@ function Chat({ username, roomname, socket, setEncryptedText, setDecryptedText }
     // Handle incoming messages
     const handleMessage = (data) => {
       console.log("Received message:", data);
-      const decryptedText = to_Decrypt(data.text, data.username);
 
-      // Only update messages if it's a new message to avoid unnecessary re-renders
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        {
-          userId: data.userId,
-          username: data.username,
-          text: decryptedText,
-        },
-      ]);
+      if (data.file) {
+        // Decrypt the file content
+        const decryptedFile = to_Decrypt(data.file, data.username);
 
-      // Set the decrypted text to the parent component (for Process)
-      setDecryptedText(decryptedText);
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          {
+            userId: data.userId,
+            username: data.username,
+            file: decryptedFile,
+            fileName: data.fileName,
+          },
+        ]);
+
+        setDecryptedText(decryptedFile); // Update decrypted text for Process component
+      } else {
+        // Handle text messages
+        const decryptedText = to_Decrypt(data.text, data.username);
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          {
+            userId: data.userId,
+            username: data.username,
+            text: decryptedText,
+          },
+        ]);
+
+        setDecryptedText(decryptedText); // Update decrypted text for Process component
+      }
     };
 
-    // Attach the message handler to the socket
     socket.on("message", handleMessage);
 
-    // Cleanup the socket listener on component unmount
     return () => {
       socket.off("message", handleMessage);
     };
-  }, [socket, setDecryptedText]); // Make sure useEffect runs properly with updated dependencies
+  }, [socket, setDecryptedText]);
 
   const sendData = () => {
     if (text.trim() !== "") {
-      console.log("Send button clicked, text:", text.trim());
       const encryptedText = to_Encrypt(text.trim());
-      console.log("Encrypted message:", encryptedText);
-
-      // Emit the encrypted message to the backend
       socket.emit("chat", { text: encryptedText, username, roomname }, () => {
         console.log("Message emitted successfully");
       });
 
-      // Set the encrypted text to the parent component (for Process)
-      setEncryptedText(encryptedText);
-
-      // Reset text input
-      setText("");
-    } else {
-      console.log("Empty message, not sending.");
+      setEncryptedText(encryptedText); // Update encrypted text for Process component
+      setText(""); // Clear input field
     }
+  };
+
+  const sendFile = (file) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64File = reader.result;
+
+      // Encrypt the file content
+      const encryptedFile = to_Encrypt(base64File);
+
+      // Emit the encrypted file to the server
+      socket.emit(
+        "file",
+        {
+          file: encryptedFile, // Send encrypted file content
+          fileName: file.name,
+          username,
+          roomname,
+        },
+        () => {
+          console.log("File emitted successfully");
+        }
+      );
+
+      // Only update the messages state after the server broadcasts the file
+      setEncryptedText(encryptedFile); // Update encrypted text for Process component
+    };
+
+    reader.readAsDataURL(file);
   };
 
   const scrollToBottom = () => {
@@ -65,7 +99,7 @@ function Chat({ username, roomname, socket, setEncryptedText, setDecryptedText }
     }
   };
 
-  useEffect(scrollToBottom, [messages]); // Scroll when messages are updated
+  useEffect(scrollToBottom, [messages]);
 
   return (
     <div className="chat">
@@ -80,7 +114,14 @@ function Chat({ username, roomname, socket, setEncryptedText, setDecryptedText }
             key={index}
             className={`message ${msg.username === username ? "" : "mess-right"}`}
           >
-            <p>{msg.text}</p>
+            {msg.text && <p>{msg.text}</p>}
+            {msg.file && (
+              <p>
+                <a href={msg.file} download={msg.fileName}>
+                  {msg.fileName}
+                </a>
+              </p>
+            )}
             <span>{msg.username}</span>
           </div>
         ))}
@@ -97,8 +138,15 @@ function Chat({ username, roomname, socket, setEncryptedText, setDecryptedText }
             }
           }}
         />
-        
         <button onClick={sendData}>Send</button>
+        <input
+          type="file"
+          onChange={(e) => {
+            if (e.target.files[0]) {
+              sendFile(e.target.files[0]);
+            }
+          }}
+        />
       </div>
     </div>
   );
